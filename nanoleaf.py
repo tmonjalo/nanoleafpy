@@ -4,6 +4,44 @@
 import sys
 import time
 import socket
+import requests  # external dependency
+
+
+class Nanoleaf:
+
+    DEFAULT_PORT = '16021'
+    API_PREFIX = '/api/v1/'
+
+    def __init__(self, target, token=None):
+        self.session = requests.Session()
+        self.session.hooks = {
+            'response': lambda r, *args, **kwargs: r.raise_for_status()
+        }
+        if ':' in target:
+            self.target = target
+        else:
+            self.target = target + ':' + self.DEFAULT_PORT
+        self._url = 'http://' + self.target + self.API_PREFIX
+        self.token = token
+
+    def __eq__(self, other):
+        return self.url() == other.url()
+
+    def __repr__(self):
+        return self.url()
+
+    def url(self, endpoint=''):
+        if self.token:
+            return self._url + self.token + '/' + endpoint
+        else:
+            return self._url + endpoint
+
+    def add_user(self):
+        response = self.session.post(self.url('new'))
+        self.token = response.json()['auth_token']
+
+    def del_user(self):
+        self.session.delete(self.url())
 
 
 class NanoleafZeroconf:
@@ -50,3 +88,37 @@ if __name__ == '__main__':
                                     NanoleafZeroconf())
             time.sleep(3)
             sys.exit()
+
+    if sys.argv[1] == '-h':  # command line help
+        print("usage: %s [target] [[-]token]" % sys.argv[0])
+        print("\t\t* search devices if no target")
+        print("\t\t* get a token if none provided")
+        print("\t\t* delete the token if minus-prefixed")
+        sys.exit()
+
+    target = sys.argv[1]
+
+    if len(sys.argv) == 2:  # get an authentication token
+        print("no token provided, getting one...")
+        nanoleaf = Nanoleaf(target)
+        try:
+            nanoleaf.add_user()
+        except requests.exceptions.HTTPError as error:
+            if error.response.status_code == 403:
+                print("ERROR 403")
+                print("\thold the power button down until controller blink")
+                print("\tand try again within 30 seconds")
+                sys.exit(1)
+            else:
+                raise
+        print("token: %s" % nanoleaf.token)
+        sys.exit()
+
+    token = sys.argv[2]
+
+    if token.startswith('-'):  # delete the token
+        token = token[1:]
+        nanoleaf = Nanoleaf(target, token)
+        nanoleaf.del_user()
+        print("token %s deleted" % nanoleaf.token)
+        sys.exit()
