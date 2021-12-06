@@ -150,6 +150,19 @@ class Nanoleaf:
     def effects(self):
         return self.get('effects/effectsList')
 
+    @property
+    def layout(self):
+        return self.get('panelLayout/layout')
+
+    @property
+    def orientation(self):
+        return self.get('panelLayout/globalOrientation/value')
+
+    @orientation.setter
+    def orientation(self, angle):
+        """The angle is counter clockwise."""
+        self.put('panelLayout', {'globalOrientation': {'value': angle}})
+
 
 class NanoleafZeroconf:
 
