@@ -48,6 +48,11 @@ A token can be revoked by using the sign "minus" as a prefix::
 
    ./nanoleaf.py 192.168.1.128 -myc0mpl1c4tetok3n
 
+When specifying the token without "minus" on the command line,
+some information is queried and the light is flashing::
+
+   ./nanoleaf.py 192.168.1.128 myc0mpl1c4tetok3n
+
 
 Basic Requests
 --------------
@@ -64,3 +69,10 @@ Once initialized, the ``Nanoleaf`` instance will use
 a single session for all requests.
 
 An exception is raised if an error occurs.
+
+The API requests are implemented in more or less specialized class methods.
+Some methods are for exactly one specific request,
+while other methods are flexible thanks to some parameters:
+
+* The methods ``get`` and ``put`` are fully generic and called by other ones.
+* The method ``identify`` is only for flashing lights.
