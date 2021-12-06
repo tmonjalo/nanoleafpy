@@ -1,2 +1,9 @@
     POST     new
-    DELETE   [token]
+GET DELETE   [token]
+    PUT          identify
+GET              name
+GET              serialNo
+GET              manufacturer
+GET              model
+GET              hardwareVersion
+GET              firmwareVersion

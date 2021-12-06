@@ -43,6 +43,16 @@ class Nanoleaf:
     def del_user(self):
         self.session.delete(self.url())
 
+    def get(self, endpoint=''):
+        return self.session.get(self.url(endpoint)).json()
+
+    def put(self, endpoint, body=None):
+        self.session.put(self.url(endpoint), json=body)
+
+    def identify(self):
+        """Make lights flashing."""
+        self.put('identify')
+
 
 class NanoleafZeroconf:
 
@@ -122,3 +132,24 @@ if __name__ == '__main__':
         nanoleaf.del_user()
         print("token %s deleted" % nanoleaf.token)
         sys.exit()
+
+    # flash lights and get information
+    nanoleaf = Nanoleaf(target, token)
+    nanoleaf.identify()
+    info = nanoleaf.get()
+    print("%s %s / serial %s / model %s / version %s / firmware %s" %
+          (info['manufacturer'], info['name'], info['serialNo'], info['model'],
+           info['hardwareVersion'], info['firmwareVersion']))
+    state = info['state']
+    if 'on' in state:
+        print("state: %s" % ('on' if state['on']['value'] else 'off'))
+    if 'colorMode' in state:
+        print("color mode: %s" % state['colorMode'])
+    if 'ct' in state:
+        print("color temperature: %s" % state['ct'])
+    if 'hue' in state:
+        print("hue: %s" % state['hue'])
+    if 'sat' in state:
+        print("saturation: %s" % state['sat'])
+    if 'brightness' in state:
+        print("brightness: %s" % state['brightness'])
