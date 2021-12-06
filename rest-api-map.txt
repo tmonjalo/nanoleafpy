@@ -7,3 +7,13 @@ GET              manufacturer
 GET              model
 GET              hardwareVersion
 GET              firmwareVersion
+GET              state
+GET PUT              on          value
+GET                  colorMode
+GET PUT              ct          value, min, max
+GET PUT              hue         value, min, max
+GET PUT              sat         value, min, max
+GET PUT              brightness  value, min, max
+GET              effects
+GET                  effectsList
+GET PUT              select
