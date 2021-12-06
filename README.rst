@@ -143,3 +143,17 @@ There are 4 types of events managed by this method:
 #. ``EventType.LAYOUT`` for ``EventLayout``.
 #. ``EventType.EFFECT``.
 #. ``EventType.TOUCH`` for ``EventGesture``.
+
+A fifth type, ``EventTouch``, is a low-level touch event type
+which may be received fastly (with low latency)
+by providing a callback function to the method ``listen_touch_events``.
+
+The touch events stream must be open before calling ``listen_events``.
+This condition can be checked with ``touch_events.is_open``:
+
+.. code-block:: python
+
+    Thread(daemon=True, target=nanoleaf.listen_touch_events,
+           args=(print_event,)).start()
+    while not nanoleaf.touch_events.is_open():
+        time.sleep(0.1)
