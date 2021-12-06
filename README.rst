@@ -113,3 +113,5 @@ Most API endpoints are managed as properties:
   .. code-block:: python
 
      nanoleaf.effect = nanoleaf.effects[3]
+
+* The ``orientation`` of the controller is in counter clockwise degrees.

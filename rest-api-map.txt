@@ -17,3 +17,6 @@ GET PUT              brightness  value, min, max
 GET              effects
 GET                  effectsList
 GET PUT              select
+GET              panelLayout
+GET                  layout
+GET PUT              globalOrientation
