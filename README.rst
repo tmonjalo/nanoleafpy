@@ -115,3 +115,31 @@ Most API endpoints are managed as properties:
      nanoleaf.effect = nanoleaf.effects[3]
 
 * The ``orientation`` of the controller is in counter clockwise degrees.
+
+
+Events
+------
+
+Some high-level events may be received slowly
+by providing a callback function to the method ``listen_events``.
+
+The event messaging uses a Server-Sent Events (SSE) stream,
+so it requires a dedicated Python module for receiving:
+either ``sseclient`` or ``sseclient-py``.
+
+It is recommended to receive events in a daemon thread:
+
+.. code-block:: python
+
+   from threading import Thread
+   def print_event(event, nanoleaf, user_data):
+       print(event)
+   Thread(daemon=True, target=nanoleaf.listen_events,
+          args=(list(nanoleaf.EventType), print_event)).start()
+
+There are 4 types of events managed by this method:
+
+#. ``EventType.STATE`` for ``EventState``.
+#. ``EventType.LAYOUT`` for ``EventLayout``.
+#. ``EventType.EFFECT``.
+#. ``EventType.TOUCH`` for ``EventGesture``.

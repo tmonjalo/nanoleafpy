@@ -20,3 +20,4 @@ GET PUT              select
 GET              panelLayout
 GET                  layout
 GET PUT              globalOrientation
+GET              events

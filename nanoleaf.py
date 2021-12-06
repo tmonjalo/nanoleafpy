@@ -4,6 +4,7 @@
 from enum import Enum
 import sys
 import time
+import json
 import socket
 import requests  # external dependency
 
@@ -163,6 +164,69 @@ class Nanoleaf:
         """The angle is counter clockwise."""
         self.put('panelLayout', {'globalOrientation': {'value': angle}})
 
+    class EventType(Enum):
+        STATE = 1
+        LAYOUT = 2
+        EFFECT = 3
+        TOUCH = 4
+
+    class EventState(Enum):
+        POWER = 1
+        BRIGHTNESS = 2
+        HUE = 3
+        SATURATION = 4
+        COLOR_TEMP = 5
+        COLOR_MODE = 6
+
+    class EventLayout(Enum):
+        PANELS = 1
+        ORIENTATION = 2
+
+    class EventGesture(Enum):
+        TAP_SINGLE = 0
+        TAP_DOUBLE = 1
+        SWIPE_UP = 2
+        SWIPE_DOWN = 3
+        SWIPE_LEFT = 4
+        SWIPE_RIGHT = 5
+        HOLD = 6
+
+    def listen_events(self, types, sse_notifier=None, user_data=None):
+        """Receive Server-Sent Events (SSE).
+
+        types is a set of EventType to be notified.
+        sse_notifier is called with (event dict, Nanoleaf, user_data).
+        """
+        url = self.url('events?id=' + ','.join([str(t.value) for t in types]))
+        from sseclient import SSEClient  # external dependency
+        if hasattr(SSEClient, 'events'):  # module sseclient-py
+            stream = self.session.get(url, stream=True)
+            sse = SSEClient(stream).events()
+        else:  # module sseclient
+            sse = SSEClient(url, session=self.session)
+        self.sse_stop = False
+        if not sse_notifier:
+            return
+        for events in sse:
+            for event in json.loads(events.data)['events']:
+                event_type = self.EventType(int(events.id))
+                event['type'] = event_type
+                if event_type is self.EventType.STATE:
+                    event['attr'] = self.EventState(event['attr'])
+                elif event_type is self.EventType.LAYOUT:
+                    event['attr'] = self.EventLayout(event['attr'])
+                elif event_type is self.EventType.TOUCH:
+                    event['gesture'] = self.EventGesture(event['gesture'])
+                    panel = event['panelId']
+                    event['panel'] = panel if panel >= 0 else None
+                sse_notifier(event, self, user_data)
+                if self.sse_stop:
+                    return
+
+    def close_events(self):
+        """Close after receiving the next event."""
+        self.sse_stop = True
+
 
 class NanoleafZeroconf:
 
@@ -263,3 +327,11 @@ if __name__ == '__main__':
         print("saturation: %s" % state['sat'])
     if 'brightness' in state:
         print("brightness: %s" % state['brightness'])
+
+    # listen for all events
+    from threading import Thread
+    def print_event(event, nanoleaf, user_data):
+        print(event)
+    Thread(daemon=True, target=nanoleaf.listen_events,
+           args=(list(nanoleaf.EventType), print_event)).start()
+    input("listening for events...\n")
