@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 # SPDX-License-Identifier: Unlicense
 
+from enum import Enum
 import sys
 import time
 import socket
@@ -52,6 +53,102 @@ class Nanoleaf:
     def identify(self):
         """Make lights flashing."""
         self.put('identify')
+
+    def query(self, endpoint='', suffix='value'):
+        return self.get('state/' + endpoint + '/' + suffix)
+
+    def set(self, endpoint, value, duration=0):
+        body = {'value': value}
+        if duration:  # fading
+            body['duration'] = duration
+        self.put('state', {endpoint: body})
+
+    def update(self, endpoint, diff):
+        """State values can be updated with increment."""
+        self.put('state', {endpoint: {'increment': diff}})
+
+    class BoolState():
+
+        def __init__(self, endpoint):
+            self.endpoint = endpoint
+
+        def __get__(self, instance, owner):
+            return instance.query(self.endpoint)
+
+        def __set__(self, instance, value):
+            instance.set(self.endpoint, value)
+
+    power = BoolState('on')
+
+    class ColorMode(Enum):
+        EFFECT = 'effect'
+        TEMP = 'ct'
+        HS = 'hs'
+
+    @property
+    def color_mode(self):
+        """Can be one of ColorMode values."""
+        return self.ColorMode(self.get('state/colorMode'))
+
+    class MinMaxState():
+
+        def __init__(self, device, endpoint):
+            self.device = device
+            self.endpoint = endpoint
+
+        @property
+        def value(self):
+            return self.device.query(self.endpoint)
+
+        @property
+        def min(self):
+            return self.device.query(self.endpoint, 'min')
+
+        @property
+        def max(self):
+            return self.device.query(self.endpoint, 'max')
+
+        def __int__(self):
+            return self.value
+
+        def __iadd__(self, diff):
+            self.device.update(self.endpoint, diff)
+            return None  # skip implicit assignment
+
+        def __isub__(self, diff):
+            self.device.update(self.endpoint, -diff)
+            return None  # skip implicit assignment
+
+    class IntState():
+
+        def __init__(self, endpoint):
+            self.endpoint = endpoint
+
+        def __get__(self, instance, owner):
+            return owner.MinMaxState(instance, self.endpoint)
+
+        def __set__(self, instance, value):
+            if isinstance(value, int):
+                instance.set(self.endpoint, value)
+            elif isinstance(value, tuple):  # fading
+                instance.set(self.endpoint, value[0], value[1])
+
+    ct = IntState('ct')
+    hue = IntState('hue')
+    sat = IntState('sat')
+    brightness = IntState('brightness')
+
+    @property
+    def effect(self):
+        return self.get('effects/select')
+
+    @effect.setter
+    def effect(self, name):
+        self.put('effects', {'select': name})
+
+    @property
+    def effects(self):
+        return self.get('effects/effectsList')
 
 
 class NanoleafZeroconf:

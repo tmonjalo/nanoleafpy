@@ -75,4 +75,41 @@ Some methods are for exactly one specific request,
 while other methods are flexible thanks to some parameters:
 
 * The methods ``get`` and ``put`` are fully generic and called by other ones.
+* The methods ``query``, ``set`` and ``update`` are a bit more specialized
+  for color states. They are used to implement some properties.
 * The method ``identify`` is only for flashing lights.
+
+Most API endpoints are managed as properties:
+
+* ``power`` is a boolean read/write property to manage on/off state.
+
+  .. code-block:: python
+
+     nanoleaf.power = True
+
+* ``color_mode`` is the read-only current mode.
+  Its value is changed when setting other properties.
+
+* ``ct``, ``hue``, ``sat`` and ``brightness``
+  can be updated with the operators ``=``, ``+=`` and ``-=``.
+  These properties have 3 members: ``min``, ``max`` and ``value``
+  which is implicitly returned when the property is converted as ``int``.
+
+  .. code-block:: python
+
+     nanoleaf.hue += 300
+     print("hue: %d (max: %d)" % (nanoleaf.hue, nanoleaf.hue.max))
+
+* ``brightness`` fading can be specified in seconds
+  if assigned with a tuple ``(value, duration)``.
+
+  .. code-block:: python
+
+     nanoleaf.brightness = (50, 3)
+
+* ``effects`` is the read-only list of available effects.
+* ``effect`` is the current effect.
+
+  .. code-block:: python
+
+     nanoleaf.effect = nanoleaf.effects[3]
