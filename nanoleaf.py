@@ -25,6 +25,7 @@ class Nanoleaf:
             self.target = target + ':' + self.DEFAULT_PORT
         self._url = 'http://' + self.target + self.API_PREFIX
         self.token = token
+        self.touch_events = self.UDP()
 
     def __eq__(self, other):
         return self.url() == other.url()
@@ -196,16 +197,25 @@ class Nanoleaf:
 
         types is a set of EventType to be notified.
         sse_notifier is called with (event dict, Nanoleaf, user_data).
+        If EventType.TOUCH is in types:
+           - EventGesture is received in sse_notifier
+           - EventTouch is received in touch_notifier
+             if listen_touch_events is already running.
         """
         url = self.url('events?id=' + ','.join([str(t.value) for t in types]))
+        headers = {}
+        if self.touch_events.is_open():
+            headers['TouchEventsPort'] = str(self.touch_events.port)
         from sseclient import SSEClient  # external dependency
         if hasattr(SSEClient, 'events'):  # module sseclient-py
-            stream = self.session.get(url, stream=True)
+            stream = self.session.get(url, headers=headers, stream=True)
             sse = SSEClient(stream).events()
         else:  # module sseclient
-            sse = SSEClient(url, session=self.session)
+            sse = SSEClient(url, session=self.session, headers=headers)
         self.sse_stop = False
-        if not sse_notifier:
+        if not sse_notifier:  # keep stream open for touch events
+            while not self.sse_stop:
+                time.sleep(1)
             return
         for events in sse:
             for event in json.loads(events.data)['events']:
@@ -226,6 +236,75 @@ class Nanoleaf:
     def close_events(self):
         """Close after receiving the next event."""
         self.sse_stop = True
+
+    class EventTouch(Enum):
+        HOVER = 0
+        DOWN = 1
+        HOLD = 2
+        UP = 3
+        SWIPE = 4
+        TAP = 5  # undocumented
+
+    def listen_touch_events(self, touch_notifier=None, user_data=None):
+        """Receive detailed touch events via UDP.
+
+        Must be called before listen_events.
+        touch_notifier is called with (event dict, Nanoleaf, user_data).
+        """
+        self.touch_events.open()
+        while self.touch_events.is_open():
+            data = self.touch_events.recv()
+            num = data[0] << 8 | data[1]
+            i = 2
+            while num:
+                event = {}
+                event['panel'] = data[i + 0] << 8 | data[i + 1]
+                event['type'] = self.EventTouch((data[i + 2] & 0x70) >> 4)
+                event['strength'] = (data[i + 2] & 0xf)
+                panel = data[i + 3] << 8 | data[i + 4]
+                if panel == 0xffff:
+                    panel = None
+                event['from'] = panel
+                touch_notifier(event, self, user_data)
+                i += 5
+                num -= 1
+
+    def close_touch_events(self):
+        self.touch_events.close()
+
+    class UDP:
+
+        def __init__(self):
+            self.socket = None
+            self.port = 0
+
+        def open(self):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            port = 10000
+            for attempt in range(9999):
+                try:
+                    sock.bind(('', port))
+                except OSError as error:
+                    last_error = error
+                    port += 1
+                else:
+                    break
+            else:
+                raise last_error
+            self.socket = sock
+            self.port = port
+
+        def is_open(self):
+            return self.port != 0
+
+        def recv(self):
+            return self.socket.recv(2048)
+
+        def close(self):
+            self.port = 0
+            if self.socket:
+                self.socket.close()
+                self.socket = None
 
 
 class NanoleafZeroconf:
@@ -332,6 +411,10 @@ if __name__ == '__main__':
     from threading import Thread
     def print_event(event, nanoleaf, user_data):
         print(event)
+    Thread(daemon=True, target=nanoleaf.listen_touch_events,
+           args=(print_event,)).start()
+    while not nanoleaf.touch_events.is_open():
+        time.sleep(0.1)
     Thread(daemon=True, target=nanoleaf.listen_events,
            args=(list(nanoleaf.EventType), print_event)).start()
     input("listening for events...\n")
