@@ -74,11 +74,11 @@ class Nanoleaf:
         def __init__(self, endpoint):
             self.endpoint = endpoint
 
-        def __get__(self, instance, owner):
-            return instance.query(self.endpoint)
+        def __get__(self, device, devclass):
+            return device.query(self.endpoint)
 
-        def __set__(self, instance, value):
-            instance.set(self.endpoint, value)
+        def __set__(self, device, value):
+            device.set(self.endpoint, value)
 
     power = BoolState('on')
 
@@ -126,14 +126,14 @@ class Nanoleaf:
         def __init__(self, endpoint):
             self.endpoint = endpoint
 
-        def __get__(self, instance, owner):
-            return owner.MinMaxState(instance, self.endpoint)
+        def __get__(self, device, devclass):
+            return devclass.MinMaxState(device, self.endpoint)
 
-        def __set__(self, instance, value):
+        def __set__(self, device, value):
             if isinstance(value, int):
-                instance.set(self.endpoint, value)
+                device.set(self.endpoint, value)
             elif isinstance(value, tuple):  # fading
-                instance.set(self.endpoint, value[0], value[1])
+                device.set(self.endpoint, value[0], value[1])
 
     ct = IntState('ct')
     hue = IntState('hue')
