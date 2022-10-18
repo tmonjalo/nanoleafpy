@@ -90,7 +90,7 @@ Most API endpoints are managed as properties:
 * ``color_mode`` is the read-only current mode.
   Its value is changed when setting other properties.
 
-* ``ct``, ``hue``, ``sat`` and ``brightness``
+* ``ct``, ``hue``, ``sat`` and ``bri`` (or ``brightness``)
   can be updated with the operators ``=``, ``+=`` and ``-=``.
   These properties have 3 members: ``min``, ``max`` and ``value``
   which is implicitly returned when the property is converted as ``int``.

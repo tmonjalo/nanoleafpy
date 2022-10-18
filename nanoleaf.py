@@ -138,6 +138,7 @@ class Nanoleaf:
     ct = IntState('ct')
     hue = IntState('hue')
     sat = IntState('sat')
+    bri = IntState('brightness')
     brightness = IntState('brightness')
 
     @property
